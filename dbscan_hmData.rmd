@@ -84,6 +84,13 @@ str(art)
 ```
 
 ```{r}
+art = subset(art, select=-c(product_code, product_type_no,department_no))
+```
+
+Randomly Sample Half
+assortment of 
+
+```{r}
 print('product_code')
 table(art$index_code, exclude = NULL)
 
