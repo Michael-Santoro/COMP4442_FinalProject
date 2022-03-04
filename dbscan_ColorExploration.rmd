@@ -1,0 +1,119 @@
+---
+title: "DB Scan Cludstering"
+author: "Michael Santoro"
+output: pdf_document
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r}
+library(expss)
+library(dplyr)
+library(dbscan)
+library(stringi)
+```
+ 
+This experiment with the HM Data will be to explore the relation of the color categories relating to the garments section number.
+
+First we need to read in the dataset from the articles.csv.
+
+```{r}
+articles <- read.csv("articlesCSV.csv", header=TRUE, sep=",") 
+```
+
+The block below checks the types of the variables included in the dataset.
+
+```{r}
+str(articles)
+```
+
+We can see from the above that there is already numeric codes that can be used as factors for the dataset. To keep some data lineage we plan to retain these codes and use the adjacent column as the label.
+
+```{r}
+vars <- c("article_id","product_code", "product_type_no", "graphical_appearance_no",
+          "colour_group_code", "perceived_colour_value_id", "perceived_colour_master_id", "department_no", "index_code","index_group_no", "section_no", "garment_group_no")
+art <-articles[vars]
+```
+
+```{r}
+print('product_code')
+distDF<-distinct(articles, product_code, .keep_all = TRUE)
+art$product_code <-factor(articles$product_code, levels = distDF$product_code,labels = distDF$prod_name)
+
+print('product_type_no')
+distDF<-distinct(articles, product_type_no, .keep_all = TRUE)
+art$product_type_no <-factor(articles$product_type_no, levels = distDF$product_type_no,labels = distDF$product_type_name)
+
+print('graphical_appearance_no')
+distDF<-distinct(articles, graphical_appearance_no, .keep_all = TRUE)
+art$graphical_appearance_no <-factor(articles$graphical_appearance_no, levels = distDF$graphical_appearance_no,labels = distDF$graphical_appearance_name)
+
+print('colour_group_code')
+distDF<-distinct(articles, colour_group_code, .keep_all = TRUE)
+art$colour_group_code <-factor(articles$colour_group_code, levels = distDF$colour_group_code,labels = distDF$colour_group_name)
+
+print('perceived_colour_value_id')
+distDF<-distinct(articles, perceived_colour_value_id, .keep_all = TRUE)
+art$perceived_colour_value_id <-factor(articles$perceived_colour_value_id, levels = distDF$perceived_colour_value_id,labels = distDF$perceived_colour_value_name)
+
+print('perceived_colour_master_id')
+distDF<-distinct(articles, perceived_colour_master_id, .keep_all = TRUE)
+art$perceived_colour_master_id <-factor(articles$perceived_colour_master_id, levels = distDF$perceived_colour_master_id,labels = distDF$perceived_colour_master_name)
+
+print('department_no')
+distDF<-distinct(articles, department_no, .keep_all = TRUE)
+art$department_no <-factor(articles$department_no, levels = distDF$department_no,labels = distDF$department_name)
+
+print('index_code')
+distDF<-distinct(articles, index_code, .keep_all = TRUE)
+art$index_code <-factor(articles$index_code, levels = distDF$index_code,labels = distDF$index_name)
+
+print('index_group_no')
+distDF<-distinct(articles, index_group_no, .keep_all = TRUE)
+art$index_group_no <-factor(articles$index_group_no, levels = distDF$index_group_no,labels = distDF$index_group_name)
+
+print('section_no')
+distDF<-distinct(articles, section_no, .keep_all = TRUE)
+art$section_no <-factor(articles$section_no, levels = distDF$section_no,labels = distDF$section_name)
+
+print('garment_group_no')
+distDF<-distinct(articles, garment_group_no, .keep_all = TRUE)
+art$garment_group_no <-factor(articles$garment_group_no, levels = distDF$garment_group_no,labels = distDF$garment_group_name)
+
+```
+
+```{r}
+colors <- art[c("article_id","graphical_appearance_no",
+          "colour_group_code", "perceived_colour_value_id", "perceived_colour_master_id", "section_no")]
+```
+
+Next we plan to re-categorize values of section number. Starting with and values containing women.
+
+```{r}
+colors["women"] <- grepl("Women",colors$section_no)
+colors["men"] <- grepl("Men",colors$section_no)
+```
+
+We can drop the all the other rows that are not categorized as Men or Womens wear.
+
+```{r}
+colors <- colors[colors$women | colors$men, ]  
+nrow(colors)
+```
+
+We can see from the above we have significantly reduced our dataset.Now we will create a matrix from the color specific data.
+
+```{r}
+X<-model.matrix(~.,colors[c("graphical_appearance_no","colour_group_code", "perceived_colour_value_id", "perceived_colour_master_id")])
+```
+
+
+```{r}
+res <- dbscan(X, eps = 1.5, minPts = 100)
+res$cluster
+```
+
+```{r}
+colors["clusters"] <- res$cluster
+```
+
