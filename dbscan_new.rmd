@@ -1,0 +1,90 @@
+---
+title: "DB Scan Cludstering"
+author: "Michael Santoro"
+output: pdf_document
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r}
+
+library(dplyr)
+library(dbscan)
+library(OpenImageR)
+library(SuperpixelImageSegmentation)
+library(glue)
+```
+ 
+This experiment with the HM Data will be to explore the relation of the color categories relating to the garments section number.
+
+First we need to read in the dataset from the articles.csv.
+
+```{r}
+images <- read.csv("images.csv", header=TRUE, sep=",") 
+```
+
+The block below checks the types of the variables included in the dataset.
+
+```{r}
+str(images)
+```
+
+```{r}
+img1 <- readImage("images_compressed/00bede7c-eae4-4ee9-a1ac-1721b3f94c54.jpg")
+df <- data.frame(list("00bede7c-eae4-4ee9-a1ac-1721b3f94c54",img1))
+img2 <- readImage("images_compressed/00d9cc6e-2564-4813-9d68-4bc4d562107b.jpg")
+```
+
+
+```{r}
+imageShow(df$c.img1.)
+```
+
+```{r}
+init = Image_Segmentation$new()
+
+spx = init$spixel_segmentation(input_image = img1, 
+                               superpixel = 600, 
+                               AP_data = TRUE,
+                               use_median = TRUE, 
+                               sim_wL = 3, 
+                               sim_wA = 10, 
+                               sim_wB = 10,
+                               sim_color_radius = 10, 
+                               verbose = TRUE)
+```
+
+```{r}
+imageShow(spx$AP_image_data)
+```
+
+```{r}
+gry <- rgb_2gray(spx$AP_image_data)
+```
+
+```{r}
+imageShow(gry)
+```
+
+
+```{r}
+imageTrasform <- function(name) {
+  file <- glue("images_compressed/{name}.jpg")
+  img <- readImage(file)
+  init = Image_Segmentation$new()
+
+  spx = init$spixel_segmentation(input_image = img, 
+                               superpixel = 600, 
+                               AP_data = TRUE,
+                               use_median = TRUE, 
+                               sim_wL = 3, 
+                               sim_wA = 10, 
+                               sim_wB = 10,
+                               sim_color_radius = 10, 
+                               verbose = TRUE)
+  gry <- rgb_2gray(spx$AP_image_data)
+  imageShow(gry)
+  return(gry)
+}
+```
+
