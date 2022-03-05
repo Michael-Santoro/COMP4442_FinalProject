@@ -44,7 +44,7 @@ table(images$label)
 ```{r}
 dropRows<-images %>% count(label)
 
-dropRows<- dropRows[which(dropRows$n<200),]
+dropRows<- dropRows[which(dropRows$n<300),]
 
 ```
 
@@ -98,7 +98,7 @@ imageTrasform <- function(name) {
   gry <- rgb_2gray(spx$AP_image_data)
   
   #Resize Image (50,50 looks better but running out of memory when running DBScan)
-  gry = resizeImage(gry, width = 10, height = 10, method = 'bilinear', normalize_pixels = TRUE)
+  gry = resizeImage(gry, width = 100, height = 100, method = 'bilinear', normalize_pixels = TRUE)
 
   
   #Show the image
@@ -112,7 +112,7 @@ gry1 <- imageTrasform("00bede7c-eae4-4ee9-a1ac-1721b3f94c54")
 gry2 <- imageTrasform("00d9cc6e-2564-4813-9d68-4bc4d562107b")
 ```
 
-We can get a distance from one image to another.
+We can get a distance from one image to another.*add something to explain distance*
 
 ```{r}
 res <- median(abs(gry1-gry2))
@@ -125,14 +125,14 @@ We will need to create a matrix.
 
 ```{r}
 #Currently only first 25 images
-transformed_images <- sapply(images$image[1:25],imageTrasform)
+transformed_images <- sapply(images$image[1:10],imageTrasform)
+#transformed_images <- sapply(images$image,imageTrasform)
 ```
 
 
 ```{r}
-table(images$label[1:25])
+table(images$label[1:10])
 ```
-
 
 ##DBScan Clustering
 Since we know from the data that none of our categories have less than 200 in a group we will pass this in as the minPts value.
@@ -140,7 +140,25 @@ The eps value we will set to larger than what we had for the average distance be
 
 
 ```{r}
-res <- dbscan(t(transformed_images), eps = 1.7, MinPts = 1)
+res <- dbscan(t(transformed_images), eps =25, minPts = 1)
 res
+```
+
+```{r}
+sub.group <- images[1:10,]
+sub.group["clusters"] <- res$cluster
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+ggplot(sub.group, aes(x = sub.group$clusters, y = sub.group$label, color=sub.group$label)) +        # Create   barchart with ggplot2
+  geom_point() +
+  ggtitle("Plot of Results")
 ```
 
