@@ -78,9 +78,10 @@ imageTrasform <- function(name) {
   img <- cropImage(img, new_width = 400, new_height = 400, type = 'equal_spaced')
   
   
+  
   #Super Pixel Transform
   init = Image_Segmentation$new()
-  spx = init$spixel_segmentation(input_image = img, 
+  spx = suppressWarnings(init$spixel_segmentation(input_image = img, 
                                superpixel = 600, 
                                AP_data = TRUE,
                                use_median = TRUE, 
@@ -90,10 +91,14 @@ imageTrasform <- function(name) {
                                sim_color_radius = 10, 
                                #verbose = TRUE
                                verbose = FALSE
-                               )
+                               ))
   
   #Convert image to grayscale
   gry <- rgb_2gray(spx$AP_image_data)
+  
+  #Resize Image (50,50 looks better but running out of memory when running DBScan)
+  gry = resizeImage(gry, width = 10, height = 10, method = 'bilinear', normalize_pixels = TRUE)
+
   
   #Show the image
   imageShow(gry)
@@ -118,12 +123,16 @@ res <- median(abs(gry1-gry2))
 We will need to create a matrix.
 
 ```{r}
-#Currently only first 100
-transfromed_images <- sapply(images$image[1:100],imageTrasform)
+#Currently only first 25 images
+transfromed_images <- sapply(images$image[1:25],imageTrasform)
 ```
 
 ```{r}
-X <- array(transfromed_images,dim = c(400,400,100))
+X <- array(transfromed_images,dim = c(100,100,25))
+```
+
+```{r}
+table(images$label[1:25])
 ```
 
 
@@ -133,7 +142,7 @@ The eps value we will set to larger than what we had for the average distance be
 
 
 ```{r}
-res <- dbscan(X, eps = 0.1, minPts = 200)
+res <- dbscan(X, eps = 0.1, minPts = 1)
 res
 ```
 
