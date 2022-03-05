@@ -4,7 +4,9 @@ author: "Michael Santoro"
 output: pdf_document
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+# Introduction
+In this exploration of DBScan (Density Based Scan) clustering we will be exploring the if the images of clothes can be clustered togther by the item
+type of clothing. We are using the clothing dataset from kaggle found here: https://www.kaggle.com/agrigorev/clothing-dataset-full?select=images.csv
 
 ```{r}
 
@@ -13,11 +15,10 @@ library(dbscan)
 library(OpenImageR)
 library(SuperpixelImageSegmentation)
 library(glue)
+library(ggplot2)
 ```
- 
-This experiment with the HM Data will be to explore the relation of the color categories relating to the garments section number.
 
-First we need to read in the dataset from the articles.csv.
+The files from Kaggle include the labels of the data included in a file names images.csv. Below we read in this data-set.
 
 ```{r}
 images <- read.csv("images.csv", header=TRUE, sep=",") 
@@ -30,49 +31,55 @@ str(images)
 ```
 
 ```{r}
-img1 <- readImage("images_compressed/00bede7c-eae4-4ee9-a1ac-1721b3f94c54.jpg")
-df <- data.frame(list("00bede7c-eae4-4ee9-a1ac-1721b3f94c54",img1))
-img2 <- readImage("images_compressed/00d9cc6e-2564-4813-9d68-4bc4d562107b.jpg")
-```
-
-
-```{r}
-imageShow(df$c.img1.)
+ggplot(images, aes(x = label, color=label)) +        # Create   barchart with ggplot2
+  geom_bar() +
+  ggtitle("Bar Plot of Labels")
 ```
 
 ```{r}
-init = Image_Segmentation$new()
-
-spx = init$spixel_segmentation(input_image = img1, 
-                               superpixel = 600, 
-                               AP_data = TRUE,
-                               use_median = TRUE, 
-                               sim_wL = 3, 
-                               sim_wA = 10, 
-                               sim_wB = 10,
-                               sim_color_radius = 10, 
-                               verbose = TRUE)
+table(images$label)
 ```
 
 ```{r}
-imageShow(spx$AP_image_data)
+dropRows<-images %>% count(label)
+
+dropRows<- dropRows[which(dropRows$n<200),]
+
+```
+
+We will drop the categories with labels less than 200.
+
+```{r}
+images <- subset(images, !(label %in% dropRows$label))
+images <- images[which(images$label != "Not Sure"),]
 ```
 
 ```{r}
-gry <- rgb_2gray(spx$AP_image_data)
+table(images$label)
 ```
 
-```{r}
-imageShow(gry)
-```
+## Image Exploration
 
+The following function will take in a string and return an array of the image, with the following.
+We are using superpixel segementation to allow for the variance of of the distance to be less across images. As quoted from the article in the link below: "In this respect, superpixels address two problems inherent to the processing of digital images: firstly, pixels are merely a result of discretization; and secondly, the high number of pixels in large images prevents many algorithms from being computationally feasible."
+This is a form of trying soften the edges: https://cran.r-project.org/web/packages/OpenImageR/vignettes/Image_segmentation_superpixels_clustering.html.
+For the other image functions: https://cran.r-project.org/web/packages/OpenImageR/vignettes/The_OpenImageR_package.html
 
 ```{r}
 imageTrasform <- function(name) {
+  #The name is passed in as string and needs to be concatenated into the file path
   file <- glue("images_compressed/{name}.jpg")
+  print(file)
+  
+  #Read in the file
   img <- readImage(file)
+  
+  #Crop image
+  img <- cropImage(img, new_width = 400, new_height = 400, type = 'equal_spaced')
+  
+  
+  #Super Pixel Transform
   init = Image_Segmentation$new()
-
   spx = init$spixel_segmentation(input_image = img, 
                                superpixel = 600, 
                                AP_data = TRUE,
@@ -81,10 +88,52 @@ imageTrasform <- function(name) {
                                sim_wA = 10, 
                                sim_wB = 10,
                                sim_color_radius = 10, 
-                               verbose = TRUE)
+                               #verbose = TRUE
+                               verbose = FALSE
+                               )
+  
+  #Convert image to grayscale
   gry <- rgb_2gray(spx$AP_image_data)
+  
+  #Show the image
   imageShow(gry)
   return(gry)
 }
+```
+
+```{r}
+gry1 <- imageTrasform("00bede7c-eae4-4ee9-a1ac-1721b3f94c54")
+gry2 <- imageTrasform("00d9cc6e-2564-4813-9d68-4bc4d562107b")
+```
+
+We can get a distance from one image to another.
+
+```{r}
+res <- median(abs(gry1-gry2))
+
+```
+
+
+##Data Preparation for Input
+We will need to create a matrix.
+
+```{r}
+#Currently only first 100
+transfromed_images <- sapply(images$image[1:100],imageTrasform)
+```
+
+```{r}
+X <- array(transfromed_images,dim = c(400,400,100))
+```
+
+
+##DBScan Clustering
+Since we know from the data that none of our categories have less than 200 in a group we will pass this in as the minPts value.
+The eps value we will set to larger than what we had for the average distance between the two sample images.
+
+
+```{r}
+res <- dbscan(X, eps = 0.1, minPts = 200)
+res
 ```
 
