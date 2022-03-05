@@ -16,6 +16,7 @@ library(OpenImageR)
 library(SuperpixelImageSegmentation)
 library(glue)
 library(ggplot2)
+
 ```
 
 The files from Kaggle include the labels of the data included in a file names images.csv. Below we read in this data-set.
@@ -51,7 +52,7 @@ We will drop the categories with labels less than 200.
 
 ```{r}
 images <- subset(images, !(label %in% dropRows$label))
-images <- images[which(images$label != "Not Sure"),]
+# images <- images[which(images$label != "Not Sure"),] #Function is not working
 ```
 
 ```{r}
@@ -124,12 +125,9 @@ We will need to create a matrix.
 
 ```{r}
 #Currently only first 25 images
-transfromed_images <- sapply(images$image[1:25],imageTrasform)
+transformed_images <- sapply(images$image[1:25],imageTrasform)
 ```
 
-```{r}
-X <- array(transfromed_images,dim = c(100,100,25))
-```
 
 ```{r}
 table(images$label[1:25])
@@ -142,7 +140,7 @@ The eps value we will set to larger than what we had for the average distance be
 
 
 ```{r}
-res <- dbscan(X, eps = 0.1, minPts = 1)
+res <- dbscan(t(transformed_images), eps = 1.7, MinPts = 1)
 res
 ```
 
